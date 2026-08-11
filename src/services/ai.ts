@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Groq } from "groq-sdk";
 
 const router = Router();
 
@@ -11,13 +12,33 @@ export interface GenerateRequestBody {
   imageUrl?: string;
 }
 
-const createMockGeneratedContent = (
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const buildPrompt = (
   topic: string,
   platform: string,
   tone: string,
   length: string,
 ) => {
-  return `Here's a ${length.toLowerCase()} ${tone.toLowerCase()} ${platform} post about "${topic}":\n\n${topic} is the perfect topic to share because it offers value, insights, and a clear perspective. Make sure your audience understands why this matters and how they can take action. Keep the message concise, engaging, and tailored to ${platform}.`;
+  const summary = `Write a ${length.toLowerCase()} social media post for ${platform} about \"${topic}\" using a ${tone.toLowerCase()} tone.`;
+  const lengthInstructions =
+    {
+      Short: "Keep it between 50 and 100 words.",
+      Medium: "Write between 150 and 250 words and include 2-3 bullet points.",
+      Long: "Write between 300 and 500 words in multiple paragraphs with a strong hook, key takeaways, and a clear call to action.",
+    }[length] ?? "Write between 150 and 250 words.";
+
+  return `You are a helpful copywriter specialized in social media content.
+
+Create a clean social media post based on the following details:
+- Topic: ${topic}
+- Platform: ${platform}
+- Tone: ${tone}
+- Length: ${length}
+
+${lengthInstructions}
+
+Return only the final post text. Do not include any explanation, analysis, or conversational prefixes like \"Here is your post\" or \"Sure thing\".`;
 };
 
 router.post("/generate", async (req, res) => {
@@ -40,25 +61,26 @@ router.post("/generate", async (req, res) => {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    let generatedContent: string;
+    const model = "llama-3.3-70b-versatile";
+    const systemPrompt = buildPrompt(effectiveTopic, platform, tone, length);
 
-    if (apiKey) {
-      // If a real AI service is configured, integrate here.
-      // For now, fallback to a mock generator to keep the flow working.
-      generatedContent = createMockGeneratedContent(
-        effectiveTopic,
-        platform,
-        tone,
-        length,
-      );
-    } else {
-      generatedContent = createMockGeneratedContent(
-        effectiveTopic,
-        platform,
-        tone,
-        length,
-      );
+    const completion = await groq.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Write the full ${length.toLowerCase()} post now. Only return the final post text without any labels or analysis.`,
+        },
+      ],
+      max_tokens: 700,
+      temperature: 0.8,
+    });
+
+    const generatedContent = completion.choices?.[0]?.message?.content?.trim();
+
+    if (!generatedContent) {
+      throw new Error("AI generation returned empty content.");
     }
 
     return res.status(200).json({
