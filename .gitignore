@@ -1,5 +1,14 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.env.local
 
-/generated/prisma
+# Build and generated artifacts
+dist
+src/generated/prisma
+
+# Ignore logs and scratch files
+*.log
+*.tmp
+*.bak
+*.swp

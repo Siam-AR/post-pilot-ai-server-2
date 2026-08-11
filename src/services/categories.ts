@@ -41,10 +41,25 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    const existing = await prisma.category.findFirst({
+      where: {
+        OR: [{ slug }, { name }],
+        isDeleted: false,
+      },
+    });
+
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        message: "Category already exists",
+        data: existing,
+      });
+    }
+
     const category = await prisma.category.create({
       data: { name, slug, description },
     });
-    res
+    return res
       .status(201)
       .json({ success: true, message: "Category created", data: category });
   } catch (error: any) {

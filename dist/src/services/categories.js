@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticateToken } from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 const router = Router();
 router.get("/", async (_req, res) => {
     const categories = await prisma.category.findMany({
@@ -27,35 +27,42 @@ router.use(authenticateToken);
 router.post("/", async (req, res) => {
     const { name, slug, description } = req.body;
     if (!name || !slug) {
-        return res
-            .status(400)
-            .json({
+        return res.status(400).json({
             success: false,
             message: "Name and slug are required",
             data: null,
         });
     }
     try {
+        const existing = await prisma.category.findFirst({
+            where: {
+                OR: [{ slug }, { name }],
+                isDeleted: false,
+            },
+        });
+        if (existing) {
+            return res.status(200).json({
+                success: true,
+                message: "Category already exists",
+                data: existing,
+            });
+        }
         const category = await prisma.category.create({
             data: { name, slug, description },
         });
-        res
+        return res
             .status(201)
             .json({ success: true, message: "Category created", data: category });
     }
     catch (error) {
         if (error.code === "P2002") {
-            return res
-                .status(409)
-                .json({
+            return res.status(409).json({
                 success: false,
                 message: "Category slug or name already exists",
                 data: null,
             });
         }
-        return res
-            .status(500)
-            .json({
+        return res.status(500).json({
             success: false,
             message: "Failed to create category",
             data: null,
@@ -73,9 +80,7 @@ router.patch("/:id", async (req, res) => {
     }
     catch (error) {
         if (error.code === "P2002") {
-            return res
-                .status(409)
-                .json({
+            return res.status(409).json({
                 success: false,
                 message: "Category slug or name already exists",
                 data: null,

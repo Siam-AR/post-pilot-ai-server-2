@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticateToken, } from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+import { authenticateToken, } from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 const router = Router();
 const requireAdmin = (req, res, next) => {
     if (req.user?.role !== "ADMIN") {
