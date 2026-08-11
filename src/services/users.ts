@@ -1,13 +1,17 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import {
   authenticateToken,
   AuthenticatedRequest,
-} from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+} from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 
 const router = Router();
 
-const requireAdmin = (req: AuthenticatedRequest, res, next) => {
+const requireAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   if (req.user?.role !== "ADMIN") {
     return res.status(403).json({
       success: false,

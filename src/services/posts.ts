@@ -2,8 +2,8 @@ import { Router } from "express";
 import {
   authenticateToken,
   AuthenticatedRequest,
-} from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+} from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 
 const router = Router();
 
@@ -46,13 +46,11 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
 
   if (!userId || !title || !generatedContent || !platform || !tone || !length) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Missing required post fields",
-        data: null,
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Missing required post fields",
+      data: null,
+    });
   }
 
   const post = await prisma.post.create({

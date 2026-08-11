@@ -2,8 +2,8 @@ import { Router } from "express";
 import {
   authenticateToken,
   AuthenticatedRequest,
-} from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+} from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 
 const router = Router();
 
@@ -59,13 +59,11 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     !detailedDescription ||
     !categoryId
   ) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Missing required idea fields",
-        data: null,
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Missing required idea fields",
+      data: null,
+    });
   }
 
   const idea = await prisma.idea.create({
