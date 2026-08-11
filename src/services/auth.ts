@@ -46,7 +46,9 @@ router.post("/register", async (req, res) => {
       data: user,
     });
   } catch (error: any) {
-    if (error.code === "P2002") {
+    console.error("Auth register error:", error);
+
+    if (error?.code === "P2002") {
       return res.status(409).json({
         success: false,
         message: "Email already in use",
@@ -56,77 +58,95 @@ router.post("/register", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to register user",
+      message: error?.message || "Failed to register user",
       data: null,
     });
   }
 });
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+        data: null,
+      });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email, isDeleted: false },
+    });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+        data: null,
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || "fallback_secret",
+      { expiresIn: "8h" },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: { token },
+    });
+  } catch (error: any) {
+    console.error("Auth login error:", error);
+    return res.status(500).json({
       success: false,
-      message: "Email and password are required",
+      message: error?.message || "Failed to log in",
       data: null,
     });
   }
-
-  const user = await prisma.user.findFirst({
-    where: { email, isDeleted: false },
-  });
-
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid email or password",
-      data: null,
-    });
-  }
-
-  const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET || "fallback_secret",
-    { expiresIn: "8h" },
-  );
-
-  return res.status(200).json({
-    success: true,
-    message: "Login successful",
-    data: { token },
-  });
 });
 
 router.get("/me", authenticateToken, async (req: AuthenticatedRequest, res) => {
-  const userId = req.user?.id;
+  try {
+    const userId = req.user?.id;
 
-  if (!userId) {
-    return res.status(401).json({
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+        data: null,
+      });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile loaded successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    console.error("Auth profile error:", error);
+    return res.status(500).json({
       success: false,
-      message: "Unauthorized",
+      message: "Failed to load profile",
       data: null,
     });
   }
-
-  const user = await prisma.user.findFirst({
-    where: { id: userId, isDeleted: false },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  return res.status(200).json({
-    success: true,
-    message: "Profile loaded successfully",
-    data: user,
-  });
 });
 
 export default router;

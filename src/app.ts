@@ -1,14 +1,31 @@
 import express from "express";
 import cors from "cors";
+import path from "node:path";
 import routes from "./routes/index.js";
+import authRouter from "./services/auth.js";
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.NEXT_PUBLIC_API_URL,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1", routes);
+app.use("/auth", authRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
