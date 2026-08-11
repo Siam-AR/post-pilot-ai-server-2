@@ -23,11 +23,20 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
 
+const connectionStringWithSsl = connectionString
+  ? ensureSslModeNoVerify(connectionString)
+  : connectionString;
+
 let prisma: PrismaClient;
+
+if (connectionStringWithSsl) {
+  process.env.DATABASE_URL = connectionStringWithSsl;
+  process.env.DIRECT_URL = connectionStringWithSsl;
+}
 
 try {
   const pool = new pg.Pool({
-    connectionString,
+    connectionString: connectionStringWithSsl,
     ssl: {
       rejectUnauthorized: false,
     },
@@ -38,6 +47,21 @@ try {
 } catch (error) {
   console.warn("Falling back to PrismaClient without adapter-pg:", error);
   prisma = new PrismaClient();
+}
+
+function ensureSslModeNoVerify(url: string) {
+  if (process.env.NODE_ENV !== "production") {
+    return url;
+  }
+
+  const lower = url.toLowerCase();
+  if (lower.includes("sslmode=") || lower.includes("sslaccept=")) {
+    return url;
+  }
+
+  return url.includes("?")
+    ? `${url}&sslmode=no-verify`
+    : `${url}?sslmode=no-verify`;
 }
 
 export { prisma };
