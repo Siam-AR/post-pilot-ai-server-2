@@ -5,12 +5,11 @@ import authRouter from "./services/auth.js";
 const app = express();
 const allowedOrigins = [
     process.env.FRONTEND_URL,
-    process.env.NEXT_PUBLIC_API_URL,
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-].filter(Boolean);
+].filter((origin) => Boolean(origin));
 app.use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,

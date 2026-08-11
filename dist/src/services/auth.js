@@ -39,7 +39,8 @@ router.post("/register", async (req, res) => {
         });
     }
     catch (error) {
-        if (error.code === "P2002") {
+        console.error("Auth register error:", error);
+        if (error?.code === "P2002") {
             return res.status(409).json({
                 success: false,
                 message: "Email already in use",
@@ -48,7 +49,7 @@ router.post("/register", async (req, res) => {
         }
         return res.status(500).json({
             success: false,
-            message: "Failed to register user",
+            message: error?.message || "Failed to register user",
             data: null,
         });
     }

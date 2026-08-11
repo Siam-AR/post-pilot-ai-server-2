@@ -12,3 +12,6 @@ src/generated/prisma
 *.tmp
 *.bak
 *.swp
+
+.vercel
+.env*.local
