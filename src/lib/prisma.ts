@@ -32,6 +32,11 @@ let prisma: PrismaClient;
 if (connectionStringWithSsl) {
   process.env.DATABASE_URL = connectionStringWithSsl;
   process.env.DIRECT_URL = connectionStringWithSsl;
+
+  if (process.env.NODE_ENV === "production") {
+    process.env.PGSSLMODE = "no-verify";
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  }
 }
 
 try {
