@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticateToken } from "@/middlewares/auth.middleware";
-import prisma from "@/lib/prisma";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
+import prisma from "../lib/prisma.js";
 
 const router = Router();
 
@@ -33,13 +33,11 @@ router.post("/", async (req, res) => {
   const { name, slug, description } = req.body;
 
   if (!name || !slug) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Name and slug are required",
-        data: null,
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Name and slug are required",
+      data: null,
+    });
   }
 
   try {
@@ -51,21 +49,17 @@ router.post("/", async (req, res) => {
       .json({ success: true, message: "Category created", data: category });
   } catch (error: any) {
     if (error.code === "P2002") {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "Category slug or name already exists",
-          data: null,
-        });
-    }
-    return res
-      .status(500)
-      .json({
+      return res.status(409).json({
         success: false,
-        message: "Failed to create category",
+        message: "Category slug or name already exists",
         data: null,
       });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create category",
+      data: null,
+    });
   }
 });
 
@@ -79,13 +73,11 @@ router.patch("/:id", async (req, res) => {
     res.json({ success: true, message: "Category updated", data: category });
   } catch (error: any) {
     if (error.code === "P2002") {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "Category slug or name already exists",
-          data: null,
-        });
+      return res.status(409).json({
+        success: false,
+        message: "Category slug or name already exists",
+        data: null,
+      });
     }
     return res
       .status(404)
