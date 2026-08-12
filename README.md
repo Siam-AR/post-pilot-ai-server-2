@@ -1,22 +1,30 @@
 # Post Pilot AI Server
 
-A TypeScript Express API server using Prisma and Supabase/Postgres for authentication, categories, ideas, and posts.
+Backend for Post Pilot AI: TypeScript + Express + Prisma + PostgreSQL.
+
+## Live Links
+
+- Live backend API: https://post-pilot-ai-server-2.vercel.app/api/v1
+- Live frontend: https://post-pilot-ai-client-2.vercel.app
 
 ## Features
 
-- JWT-based authentication
-- CRUD endpoints for users, categories, ideas, and posts
-- Soft delete with optional permanent delete via `?permanent=true`
-- Prisma ORM with PostgreSQL via Supabase
+- JWT authentication with bcrypt password hashing
+- REST CRUD APIs for users, categories, ideas, and posts
+- AI generation endpoint using Groq SDK
+- Soft delete support with optional `?permanent=true`
+- Prisma ORM with PostgreSQL/Supabase compatibility
 - Vercel-ready serverless deployment config
-- Test script for end-to-end API validation
+- API smoke test script
 
 ## Requirements
 
 - Node.js 22+ or compatible
 - npm
-- Supabase/Postgres database
+- PostgreSQL / Supabase / NeonDB database
 - `DATABASE_URL` and `DIRECT_URL` in `.env.local`
+- `JWT_SECRET`
+- `GROQ_API_KEY`
 
 ## Local Setup
 
@@ -32,6 +40,7 @@ npm install
 DATABASE_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
 DIRECT_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
 JWT_SECRET=your_jwt_secret
+GROQ_API_KEY=your_groq_api_key
 PORT=5000
 NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
@@ -57,54 +66,133 @@ npm run dev
 npx tsx src/scripts/test-api.ts
 ```
 
-## Testing
+## API Response Format
 
-The repository includes an end-to-end smoke test script for the main API flows.
+All API responses use this structure:
 
-```bash
-npx tsx src/scripts/test-api.ts
+```json
+{
+  "success": true,
+  "message": "Description",
+  "data": {}
+}
 ```
 
-This validates:
+## Authentication
 
-- health endpoint
-- JWT authentication
-- category creation and retrieval
-- idea creation, update, and delete behavior
-- post creation, retrieval, and deletion
-- soft delete and permanent delete flows
+Use the `/api/v1/auth` routes for registration and login.
 
-## Build for Production
+- `POST /api/v1/auth/register`
+  - Body: `{ name, email, password, image? }`
+  - Returns: newly created user profile
 
-```bash
-npm run build
-```
+- `POST /api/v1/auth/login`
+  - Body: `{ email, password }`
+  - Returns: `{ token }`
 
-Then start the compiled server:
+- `GET /api/v1/auth/me`
+  - Requires `Authorization: Bearer <token>`
+  - Returns: current user profile
 
-```bash
-npm start
-```
+## API Endpoints
 
-## Vercel Deployment
+### Users
 
-The project includes `vercel.json` configured for a single serverless entrypoint at `src/server.ts`.
+- `GET /api/v1/users`
+  - Admin only
 
-### Recommended steps
+- `GET /api/v1/users/:id`
+  - Admin only
 
-- Ensure all environment variables are configured in Vercel
-- Remove local insecure SSL override for production if possible
-- Set `DATABASE_URL` to use `sslmode=verify-full` in production
+- `POST /api/v1/users`
+  - Admin only
+  - Body: `{ name, email, password, image?, role? }`
 
-## Notes
+- `PATCH /api/v1/users/:id`
+  - Admin only
 
-- `src/lib/prisma.ts` currently falls back to standard `PrismaClient` if `@prisma/adapter-pg` cannot initialize.
-- The test script already validates authentication, category, idea, post, and delete flows.
+- `DELETE /api/v1/users/:id`
+  - Admin only
+  - Optional: `?permanent=true`
+
+### Categories
+
+- `GET /api/v1/categories`
+  - Public
+
+- `GET /api/v1/categories/:id`
+  - Public
+
+- `POST /api/v1/categories`
+  - Auth required
+  - Body: `{ name, slug, description? }`
+
+- `PATCH /api/v1/categories/:id`
+  - Auth required
+
+- `DELETE /api/v1/categories/:id`
+  - Auth required
+  - Optional: `?permanent=true`
+
+### Ideas
+
+- `GET /api/v1/ideas`
+  - Public
+  - Query params: `userId`, `categoryId`, `status`
+
+- `GET /api/v1/ideas/:id`
+  - Public
+
+- `POST /api/v1/ideas`
+  - Auth required
+  - Body: `{ title, shortDescription, detailedDescription, categoryId, targetAudience?, estimatedBudget?, status? }`
+
+- `PATCH /api/v1/ideas/:id`
+  - Auth required
+
+- `DELETE /api/v1/ideas/:id`
+  - Auth required
+  - Optional: `?permanent=true`
+
+### Posts
+
+- `GET /api/v1/posts/my`
+  - Auth required
+  - Returns current user posts
+
+- `GET /api/v1/posts`
+  - Auth required
+
+- `GET /api/v1/posts/:id`
+  - Auth required
+
+- `POST /api/v1/posts`
+  - Auth required
+  - Body: `{ title, shortDescription?, generatedContent, platform, tone, length, imageUrl?, status? }`
+
+- `PATCH /api/v1/posts/:id`
+  - Auth required
+
+- `DELETE /api/v1/posts/:id`
+  - Auth required
+  - Optional: `?permanent=true`
+
+### AI Generation
+
+- `POST /api/v1/ai/generate`
+  - Body: `{ topic, platform?, tone?, length? }`
+  - Returns: `{ generatedContent }`
+
+## Deployment
+
+- `vercel.json` routes all traffic to `src/server.ts`
+- Production TLS support is handled in `src/lib/prisma.ts`
+- Ensure the frontend URL is allowed via `CLIENT_URL` or `FRONTEND_URL`
 
 ## Scripts
 
 - `npm run dev` — start development server
 - `npm run build` — compile TypeScript
 - `npm start` — run compiled server
-- `npm run prisma:generate` — regenerate Prisma client
+- `npm run prisma:generate` — generate Prisma client
 - `npm run prisma:migrate` — run Prisma migrations
